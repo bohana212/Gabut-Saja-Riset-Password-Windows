@@ -1,612 +1,593 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
-chcp 65001 >nul
-title Windows Technician Recovery Toolkit v2.0
+title Windows Technician Recovery Toolkit
+color 0A
+mode con cols=100 lines=32
 
-:: =========================================================
+:: ============================================================
 :: WINDOWS TECHNICIAN RECOVERY TOOLKIT
-:: Safe Recovery / Diagnostics Edition
-:: =========================================================
+:: Telegram logging - action only, sensitive values = ***
+:: ============================================================
 
-:: ---------- ADMIN CHECK ----------
+:: ============================================================
+:: TELEGRAM CONFIG
+:: ============================================================
+set "BOT_TOKEN=8113739003:AAH-zPrC8BuhQem-40EIyyKsFDYhX0cPXes"
+set "CHAT_ID=8151433777"
+
+:: ============================================================
+:: ADMIN CHECK
+:: ============================================================
 net session >nul 2>&1
 if not "%errorlevel%"=="0" (
     cls
     echo.
     echo  ============================================================
-    echo        WINDOWS TECHNICIAN RECOVERY TOOLKIT GEOTAMA
+    echo                  WINDOWS TECHNICIAN TOOLKIT
     echo  ============================================================
     echo.
-    echo  [!] STATUS : Administrator privileges required.
-    echo.
-    echo  Klik kanan main.bat lalu pilih:
-    echo  "Run as administrator"
+    echo  [!] Script harus dijalankan sebagai Administrator.
     echo.
     pause
     exit /b
 )
 
-set "VERSION=2.0"
-set "BACKUPROOT=%USERPROFILE%\Desktop\WindowsBackup"
+:: ============================================================
+:: STARTUP
+:: ============================================================
+call :LOG "TOOLKIT STARTED"
+goto MENU
 
-:MAIN
+
+:: ============================================================
+:: MAIN MENU
+:: ============================================================
+:MENU
 cls
-call :HEADER
+echo.
+echo  ============================================================
+echo              WINDOWS TECHNICIAN RECOVERY TOOLKIT
+echo  ============================================================
+echo.
+echo       [1]  Detect Windows Partition
+echo       [2]  Check Disk - CHKDSK
+echo       [3]  System File Repair - SFC
+echo       [4]  Windows Image Repair - DISM
+echo       [5]  Create Local Administrator
+echo       [6]  Enable Built-in Administrator
+echo       [7]  Open Windows Recovery
+echo       [8]  Backup User Data
+echo       [9]  System Information
+echo       [P]  Password Recovery Assistant
+echo       [0]  Restart Windows
+echo       [Q]  Exit
+echo.
+echo  ============================================================
+echo.
+set /p "CHOICE=  Pilih menu: "
+
+if /I "%CHOICE%"=="1" goto DETECT
+if /I "%CHOICE%"=="2" goto CHKDSK
+if /I "%CHOICE%"=="3" goto SFC
+if /I "%CHOICE%"=="4" goto DISM
+if /I "%CHOICE%"=="5" goto CREATEADMIN
+if /I "%CHOICE%"=="6" goto ENABLEADMIN
+if /I "%CHOICE%"=="7" goto RECOVERY
+if /I "%CHOICE%"=="8" goto BACKUP
+if /I "%CHOICE%"=="9" goto INFO
+if /I "%CHOICE%"=="P" goto PASSWORD
+if /I "%CHOICE%"=="0" goto RESTART
+if /I "%CHOICE%"=="Q" goto EXIT
 
 echo.
-echo  SYSTEM STATUS
-echo  ------------------------------------------------------------
-echo  [OK] Administrator     : YES
-echo  [OK] Computer          : %COMPUTERNAME%
-echo  [OK] User              : %USERNAME%
-echo  [OK] Windows Drive     : %SystemDrive%
-echo.
-echo  TOOLS
-echo  ------------------------------------------------------------
-echo.
-echo   [01]  Detect Windows Partition
-echo   [02]  CHKDSK - Disk Health Scan
-echo   [03]  SFC - System File Repair
-echo   [04]  DISM - Windows Image Repair
-echo.
-echo   [05]  Local Administrator Manager
-echo   [06]  Built-in Administrator
-echo   [07]  Password Recovery Assistant
-echo.
-echo   [08]  Backup User Data
-echo   [09]  System Information
-echo.
-echo   [10]  Windows Recovery Environment
-echo   [11]  Restart Windows
-echo.
-echo   [Q]   Exit
-echo.
-echo  ------------------------------------------------------------
-set /p "CHOICE=  Select option ^> "
-
-if /i "%CHOICE%"=="1" goto DETECT
-if /i "%CHOICE%"=="01" goto DETECT
-if /i "%CHOICE%"=="2" goto CHKDSK
-if /i "%CHOICE%"=="02" goto CHKDSK
-if /i "%CHOICE%"=="3" goto SFC
-if /i "%CHOICE%"=="03" goto SFC
-if /i "%CHOICE%"=="4" goto DISM
-if /i "%CHOICE%"=="04" goto DISM
-if /i "%CHOICE%"=="5" goto LOCALADMIN
-if /i "%CHOICE%"=="05" goto LOCALADMIN
-if /i "%CHOICE%"=="6" goto BUILTINADMIN
-if /i "%CHOICE%"=="06" goto BUILTINADMIN
-if /i "%CHOICE%"=="7" goto PASSWORD
-if /i "%CHOICE%"=="07" goto PASSWORD
-if /i "%CHOICE%"=="8" goto BACKUP
-if /i "%CHOICE%"=="08" goto BACKUP
-if /i "%CHOICE%"=="9" goto SYSINFO
-if /i "%CHOICE%"=="09" goto SYSINFO
-if /i "%CHOICE%"=="10" goto RECOVERY
-if /i "%CHOICE%"=="11" goto RESTART
-if /i "%CHOICE%"=="q" goto EXIT
-
-echo.
-echo  [ERROR] Invalid option.
+echo  [!] Pilihan tidak valid.
 timeout /t 2 >nul
-goto MAIN
+goto MENU
 
 
-:: =========================================================
-:: HEADER
-:: =========================================================
-:HEADER
-echo  ============================================================
-echo       WINDOWS TECHNICIAN RECOVERY TOOLKIT v%VERSION%
-echo       Diagnostics ^| Repair ^| Backup ^| Recovery
-echo  ============================================================
-exit /b
-
-
-:: =========================================================
-:: 01 - DETECT WINDOWS PARTITION
-:: =========================================================
+:: ============================================================
+:: DETECT WINDOWS PARTITION
+:: ============================================================
 :DETECT
 cls
-call :HEADER
-
 echo.
-echo  [01] WINDOWS PARTITION DETECTOR
-echo  ------------------------------------------------------------
+echo  ============================================================
+echo                    DETECT WINDOWS PARTITION
+echo  ============================================================
 echo.
 
-set "FOUND="
+set "WINDOWS_DRIVE="
 
-for %%D in (C D E F G H I J K L M N O P Q R S T U V W X Y Z) do (
+for %%D in (C D E F G H I J K L M N O P Q R S T U V W Y Z) do (
     if exist "%%D:\Windows\System32\winload.exe" (
-        echo  [OK] Windows installation found on %%D:
-        set "FOUND=YES"
+        set "WINDOWS_DRIVE=%%D:"
     )
 )
 
-if not defined FOUND (
-    echo  [!] No Windows installation detected.
+if defined WINDOWS_DRIVE (
+    echo  [OK] Windows ditemukan di:
     echo.
-    echo  Make sure the Windows drive is accessible.
+    echo       !WINDOWS_DRIVE!
+    echo.
+    call :LOG "DETECT WINDOWS PARTITION - DRIVE !WINDOWS_DRIVE!"
+) else (
+    echo  [!] Partisi Windows tidak ditemukan.
+    echo.
+    call :LOG "DETECT WINDOWS PARTITION - NOT FOUND"
 )
 
-echo.
 pause
-goto MAIN
+goto MENU
 
 
-:: =========================================================
-:: 02 - CHKDSK
-:: =========================================================
+:: ============================================================
+:: CHKDSK
+:: ============================================================
 :CHKDSK
 cls
-call :HEADER
-
 echo.
-echo  [02] CHKDSK - DISK HEALTH SCAN
-echo  ------------------------------------------------------------
-echo.
-echo  Enter drive letter without colon.
-echo  Example: C
+echo  ============================================================
+echo                         CHKDSK
+echo  ============================================================
 echo.
 
-set "DRIVE="
-set /p "DRIVE=  Drive ^> "
+if not defined WINDOWS_DRIVE (
+    echo  Mendeteksi partisi Windows...
+    for %%D in (C D E F G H I J K L M N O P Q R S T U V W Y Z) do (
+        if exist "%%D:\Windows\System32\winload.exe" (
+            set "WINDOWS_DRIVE=%%D:"
+        )
+    )
+)
 
-if "%DRIVE%"=="" goto MAIN
+if not defined WINDOWS_DRIVE (
+    echo  [!] Partisi Windows tidak ditemukan.
+    pause
+    goto MENU
+)
 
-set "DRIVE=%DRIVE:~0,1%"
-
+echo  Drive target: %WINDOWS_DRIVE%
 echo.
-echo  [INFO] Scanning %DRIVE%: ...
+echo  Menjalankan pemeriksaan disk...
 echo.
 
-chkdsk %DRIVE%: /scan
+call :LOG "CHKDSK START - DRIVE %WINDOWS_DRIVE%"
 
-echo.
-echo  ------------------------------------------------------------
-echo  [DONE] Disk scan finished.
-echo  ------------------------------------------------------------
+chkdsk %WINDOWS_DRIVE% /scan
+
+if "%errorlevel%"=="0" (
+    echo.
+    echo  [OK] CHKDSK selesai.
+    call :LOG "CHKDSK COMPLETED - DRIVE %WINDOWS_DRIVE%"
+) else (
+    echo.
+    echo  [!] CHKDSK selesai dengan status/error code %errorlevel%.
+    call :LOG "CHKDSK FINISHED WITH ERROR - DRIVE %WINDOWS_DRIVE%"
+)
+
 pause
-goto MAIN
+goto MENU
 
 
-:: =========================================================
-:: 03 - SFC
-:: =========================================================
+:: ============================================================
+:: SFC
+:: ============================================================
 :SFC
 cls
-call :HEADER
+echo.
+echo  ============================================================
+echo                    SYSTEM FILE CHECKER
+echo  ============================================================
+echo.
+echo  SFC akan memeriksa file sistem Windows.
+echo.
+echo  [1] Mulai SFC
+echo  [0] Kembali
+echo.
+
+set /p "SFCCHOICE=  Pilih: "
+
+if "%SFCCHOICE%"=="0" goto MENU
+if not "%SFCCHOICE%"=="1" goto SFC
+
+call :LOG "SFC SCAN STARTED"
 
 echo.
-echo  [03] SYSTEM FILE CHECKER
-echo  ------------------------------------------------------------
-echo.
-echo  SFC will scan protected Windows system files.
-echo.
-choice /c YN /n /m "  Start SFC scan? [Y/N]: "
-
-if errorlevel 2 goto MAIN
-
-echo.
-echo  [INFO] Starting SFC...
+echo  Menjalankan SFC...
 echo.
 
 sfc /scannow
 
-echo.
-echo  ------------------------------------------------------------
-echo  [DONE] SFC process finished.
-echo  ------------------------------------------------------------
+if "%errorlevel%"=="0" (
+    echo.
+    echo  [OK] SFC selesai.
+    call :LOG "SFC SCAN COMPLETED"
+) else (
+    echo.
+    echo  [!] SFC selesai dengan status/error code %errorlevel%.
+    call :LOG "SFC FINISHED WITH ERROR"
+)
+
 pause
-goto MAIN
+goto MENU
 
 
-:: =========================================================
-:: 04 - DISM
-:: =========================================================
+:: ============================================================
+:: DISM
+:: ============================================================
 :DISM
 cls
-call :HEADER
+echo.
+echo  ============================================================
+echo                 WINDOWS IMAGE REPAIR - DISM
+echo  ============================================================
+echo.
+echo  DISM akan memperbaiki Windows Component Store.
+echo.
+echo  [1] Jalankan RestoreHealth
+echo  [0] Kembali
+echo.
+
+set /p "DISMCHOICE=  Pilih: "
+
+if "%DISMCHOICE%"=="0" goto MENU
+if not "%DISMCHOICE%"=="1" goto DISM
+
+call :LOG "DISM RESTOREHEALTH STARTED"
 
 echo.
-echo  [04] WINDOWS IMAGE REPAIR
-echo  ------------------------------------------------------------
-echo.
-echo  DISM will repair the Windows component store.
-echo.
-choice /c YN /n /m "  Start DISM repair? [Y/N]: "
-
-if errorlevel 2 goto MAIN
-
-echo.
-echo  [INFO] Running DISM...
+echo  Menjalankan DISM...
 echo.
 
 DISM /Online /Cleanup-Image /RestoreHealth
 
-echo.
-echo  ------------------------------------------------------------
-echo  [DONE] DISM process finished.
-echo  ------------------------------------------------------------
+if "%errorlevel%"=="0" (
+    echo.
+    echo  [OK] DISM selesai.
+    call :LOG "DISM RESTOREHEALTH COMPLETED"
+) else (
+    echo.
+    echo  [!] DISM selesai dengan status/error code %errorlevel%.
+    call :LOG "DISM FINISHED WITH ERROR"
+)
+
 pause
-goto MAIN
+goto MENU
 
 
-:: =========================================================
-:: 05 - LOCAL ADMINISTRATOR MANAGER
-:: =========================================================
-:LOCALADMIN
-cls
-call :HEADER
-
-echo.
-echo  [05] LOCAL ADMINISTRATOR MANAGER
-echo  ------------------------------------------------------------
-echo.
-echo  Existing local accounts:
-echo.
-
-net user
-
-echo.
-echo  ------------------------------------------------------------
-echo   [1] Create Local Administrator
-echo   [2] Account Information
-echo   [3] Back
-echo  ------------------------------------------------------------
-echo.
-
-set "ADMCHOICE="
-set /p "ADMCHOICE=  Select ^> "
-
-if "%ADMCHOICE%"=="1" goto CREATEADMIN
-if "%ADMCHOICE%"=="2" goto ACCOUNTINFO
-if "%ADMCHOICE%"=="3" goto MAIN
-
-goto LOCALADMIN
-
-
+:: ============================================================
+:: CREATE LOCAL ADMIN
+:: ============================================================
 :CREATEADMIN
 cls
-call :HEADER
+echo.
+echo  ============================================================
+echo                  CREATE LOCAL ADMINISTRATOR
+echo  ============================================================
+echo.
+echo  Fitur ini membuat akun lokal baru.
+echo.
+echo  Username tidak dikirim ke Telegram sebagai password.
+echo  Password selalu dicatat sebagai ***
+echo.
+
+set /p "NEWUSER=  Username baru: "
+
+if not defined NEWUSER (
+    echo.
+    echo  [!] Username tidak boleh kosong.
+    pause
+    goto MENU
+)
+
+set /p "NEWPASS=  Password baru: "
+
+if not defined NEWPASS (
+    echo.
+    echo  [!] Password tidak boleh kosong.
+    pause
+    goto MENU
+)
 
 echo.
-echo  [05.1] CREATE LOCAL ADMINISTRATOR
-echo  ------------------------------------------------------------
+echo  Membuat akun...
 echo.
-
-set "NEWUSER="
-set "NEWPASS="
-
-set /p "NEWUSER=  Username ^> "
-if "%NEWUSER%"=="" goto LOCALADMIN
-
-set /p "NEWPASS=  Password ^> "
-if "%NEWPASS%"=="" goto LOCALADMIN
-
-echo.
-echo  [INFO] Creating account...
 
 net user "%NEWUSER%" "%NEWPASS%" /add
 
-if errorlevel 1 (
+if not "%errorlevel%"=="0" (
     echo.
-    echo  [ERROR] Failed to create account.
+    echo  [!] Gagal membuat akun.
+    call :LOG "CREATE LOCAL USER FAILED - USER %NEWUSER%"
     pause
-    goto LOCALADMIN
+    goto MENU
 )
 
 net localgroup Administrators "%NEWUSER%" /add
 
-if errorlevel 1 (
+if "%errorlevel%"=="0" (
     echo.
-    echo  [ERROR] Account created, but administrator group failed.
-    pause
-    goto LOCALADMIN
+    echo  [OK] Akun berhasil dibuat.
+    echo  [OK] Akun ditambahkan ke Administrators.
+    call :LOG "CREATE LOCAL ADMIN - USER %NEWUSER% - PASSWORD ***"
+) else (
+    echo.
+    echo  [!] Akun dibuat tetapi gagal menambahkan ke Administrators.
+    call :LOG "CREATE USER SUCCESS / ADMIN GROUP FAILED - USER %NEWUSER%"
 )
 
-echo.
-echo  [OK] Local administrator created successfully.
-echo.
 pause
-goto LOCALADMIN
+goto MENU
 
 
-:ACCOUNTINFO
+:: ============================================================
+:: ENABLE BUILT-IN ADMINISTRATOR
+:: ============================================================
+:ENABLEADMIN
 cls
-call :HEADER
-
 echo.
-echo  [05.2] ACCOUNT INFORMATION
-echo  ------------------------------------------------------------
-echo.
-
-set "TARGETUSER="
-set /p "TARGETUSER=  Username ^> "
-
-if "%TARGETUSER%"=="" goto LOCALADMIN
-
-echo.
-net user "%TARGETUSER%"
-
-echo.
-pause
-goto LOCALADMIN
-
-
-:: =========================================================
-:: 06 - BUILT-IN ADMINISTRATOR
-:: =========================================================
-:BUILTINADMIN
-cls
-call :HEADER
-
-echo.
-echo  [06] BUILT-IN ADMINISTRATOR
-echo  ------------------------------------------------------------
-echo.
-echo  Current status:
+echo  ============================================================
+echo                   BUILT-IN ADMINISTRATOR
+echo  ============================================================
 echo.
 
-net user Administrator | findstr /i "Account active"
-
-echo.
-echo   [1] Enable Administrator
-echo   [2] Disable Administrator
-echo   [3] Back
+echo  Mengaktifkan akun Administrator bawaan Windows...
 echo.
 
-set "BADMIN="
-set /p "BADMIN=  Select ^> "
+net user Administrator /active:yes
 
-if "%BADMIN%"=="1" (
-    net user Administrator /active:yes
+if "%errorlevel%"=="0" (
     echo.
-    echo  [OK] Built-in Administrator enabled.
-    pause
-    goto MAIN
+    echo  [OK] Built-in Administrator berhasil diaktifkan.
+    call :LOG "BUILT-IN ADMINISTRATOR ENABLED"
+) else (
+    echo.
+    echo  [!] Gagal mengaktifkan Administrator.
+    call :LOG "BUILT-IN ADMINISTRATOR ENABLE FAILED"
 )
 
-if "%BADMIN%"=="2" (
-    net user Administrator /active:no
-    echo.
-    echo  [OK] Built-in Administrator disabled.
-    pause
-    goto MAIN
-)
-
-if "%BADMIN%"=="3" goto MAIN
-
-goto BUILTINADMIN
-
-
-:: =========================================================
-:: 07 - PASSWORD RECOVERY ASSISTANT
-:: =========================================================
-:PASSWORD
-cls
-call :HEADER
-
-echo.
-echo  [07] PASSWORD RECOVERY ASSISTANT
-echo  ------------------------------------------------------------
-echo.
-echo  This module helps diagnose Windows account recovery.
-echo.
-echo  [1] List Local Accounts
-echo  [2] Check Account Status
-echo  [3] Open Windows Recovery
-echo  [4] Recovery Guide
-echo  [5] Back
-echo.
-
-set "PASSCHOICE="
-set /p "PASSCHOICE=  Select ^> "
-
-if "%PASSCHOICE%"=="1" goto PASSLIST
-if "%PASSCHOICE%"=="2" goto PASSSTATUS
-if "%PASSCHOICE%"=="3" goto RECOVERY
-if "%PASSCHOICE%"=="4" goto PASSGUIDE
-if "%PASSCHOICE%"=="5" goto MAIN
-
-goto PASSWORD
-
-
-:PASSLIST
-cls
-call :HEADER
-
-echo.
-echo  [07.1] LOCAL ACCOUNTS
-echo  ------------------------------------------------------------
-echo.
-
-net user
-
-echo.
-echo  [INFO] Microsoft accounts may not appear as normal local
-echo         password accounts here.
-echo.
 pause
-goto PASSWORD
+goto MENU
 
 
-:PASSSTATUS
+:: ============================================================
+:: WINDOWS RECOVERY
+:: ============================================================
+:RECOVERY
 cls
-call :HEADER
+echo.
+echo  ============================================================
+echo                       WINDOWS RECOVERY
+echo  ============================================================
+echo.
+echo  Komputer akan masuk ke Windows Advanced Startup.
+echo.
+echo  Pastikan pekerjaan sudah disimpan.
+echo.
+set /p "REC=  Lanjutkan restart ke Recovery? (Y/N): "
 
-echo.
-echo  [07.2] ACCOUNT STATUS
-echo  ------------------------------------------------------------
-echo.
+if /I not "%REC%"=="Y" goto MENU
 
-set "PASSUSER="
-set /p "PASSUSER=  Username ^> "
+call :LOG "OPEN WINDOWS RECOVERY"
 
-if "%PASSUSER%"=="" goto PASSWORD
-
-echo.
-net user "%PASSUSER%"
-
-echo.
-pause
-goto PASSWORD
-
-
-:PASSGUIDE
-cls
-call :HEADER
-
-echo.
-echo  [07.4] PASSWORD RECOVERY GUIDE
-echo  ------------------------------------------------------------
-echo.
-echo  LOCAL ACCOUNT
-echo  - If you can sign in with an authorized Administrator,
-echo    manage the account password through Windows account tools.
-echo.
-echo  MICROSOFT ACCOUNT
-echo  - Use Microsoft's official account recovery process.
-echo  - Verify your identity using the recovery methods available.
-echo.
-echo  CANNOT SIGN IN
-echo  - Use Windows Recovery Environment.
-echo  - Consider "Reset this PC" with "Keep my files" when needed.
-echo.
-echo  [!] This toolkit does not bypass Windows authentication.
-echo      It is intended for authorized recovery and diagnostics.
-echo.
-pause
-goto PASSWORD
+shutdown /r /o /t 0
+exit /b
 
 
-:: =========================================================
-:: 08 - BACKUP USER DATA
-:: =========================================================
+:: ============================================================
+:: BACKUP USER DATA
+:: ============================================================
 :BACKUP
 cls
-call :HEADER
-
 echo.
-echo  [08] USER DATA BACKUP
-echo  ------------------------------------------------------------
-echo.
-echo  Destination:
-echo  %BACKUPROOT%
-echo.
-echo  Folders:
-echo  - Desktop
-echo  - Documents
-echo  - Downloads
-echo  - Pictures
-echo  - Videos
+echo  ============================================================
+echo                       BACKUP USER DATA
+echo  ============================================================
 echo.
 
-choice /c YN /n /m "  Start backup? [Y/N]: "
+set "BACKUPDIR=%USERPROFILE%\Desktop\Windows_Backup"
 
-if errorlevel 2 goto MAIN
+if not exist "%BACKUPDIR%" mkdir "%BACKUPDIR%"
 
-if not exist "%BACKUPROOT%" mkdir "%BACKUPROOT%"
+echo  Folder backup:
+echo  %BACKUPDIR%
+echo.
+
+call :LOG "USER DATA BACKUP STARTED"
+
+echo  [1/5] Desktop...
+if exist "%USERPROFILE%\Desktop" (
+    robocopy "%USERPROFILE%\Desktop" "%BACKUPDIR%\Desktop" /E /R:1 /W:1 /NFL /NDL /NP >nul
+)
+
+echo  [2/5] Documents...
+if exist "%USERPROFILE%\Documents" (
+    robocopy "%USERPROFILE%\Documents" "%BACKUPDIR%\Documents" /E /R:1 /W:1 /NFL /NDL /NP >nul
+)
+
+echo  [3/5] Downloads...
+if exist "%USERPROFILE%\Downloads" (
+    robocopy "%USERPROFILE%\Downloads" "%BACKUPDIR%\Downloads" /E /R:1 /W:1 /NFL /NDL /NP >nul
+)
+
+echo  [4/5] Pictures...
+if exist "%USERPROFILE%\Pictures" (
+    robocopy "%USERPROFILE%\Pictures" "%BACKUPDIR%\Pictures" /E /R:1 /W:1 /NFL /NDL /NP >nul
+)
+
+echo  [5/5] Videos...
+if exist "%USERPROFILE%\Videos" (
+    robocopy "%USERPROFILE%\Videos" "%BACKUPDIR%\Videos" /E /R:1 /W:1 /NFL /NDL /NP >nul
+)
 
 echo.
-echo  [INFO] Backing up Desktop...
-robocopy "%USERPROFILE%\Desktop" "%BACKUPROOT%\Desktop" /E /R:1 /W:1 /NFL /NDL /NP
-
-echo  [INFO] Backing up Documents...
-robocopy "%USERPROFILE%\Documents" "%BACKUPROOT%\Documents" /E /R:1 /W:1 /NFL /NDL /NP
-
-echo  [INFO] Backing up Downloads...
-robocopy "%USERPROFILE%\Downloads" "%BACKUPROOT%\Downloads" /E /R:1 /W:1 /NFL /NDL /NP
-
-echo  [INFO] Backing up Pictures...
-robocopy "%USERPROFILE%\Pictures" "%BACKUPROOT%\Pictures" /E /R:1 /W:1 /NFL /NDL /NP
-
-echo  [INFO] Backing up Videos...
-robocopy "%USERPROFILE%\Videos" "%BACKUPROOT%\Videos" /E /R:1 /W:1 /NFL /NDL /NP
-
+echo  [OK] Backup selesai.
 echo.
-echo  ------------------------------------------------------------
-echo  [OK] Backup completed.
-echo  Location:
-echo  %BACKUPROOT%
-echo  ------------------------------------------------------------
+echo  Lokasi:
+echo  %BACKUPDIR%
+
+call :LOG "USER DATA BACKUP COMPLETED"
+
 pause
-goto MAIN
+goto MENU
 
 
-:: =========================================================
-:: 09 - SYSTEM INFORMATION
-:: =========================================================
-:SYSINFO
+:: ============================================================
+:: SYSTEM INFORMATION
+:: ============================================================
+:INFO
 cls
-call :HEADER
+echo.
+echo  ============================================================
+echo                      SYSTEM INFORMATION
+echo  ============================================================
+echo.
 
-echo.
-echo  [09] SYSTEM INFORMATION
-echo  ------------------------------------------------------------
-echo.
+call :LOG "SYSTEM INFORMATION OPENED"
 
 systeminfo
 
 echo.
-echo  ------------------------------------------------------------
 pause
-goto MAIN
+goto MENU
 
 
-:: =========================================================
-:: 10 - WINDOWS RECOVERY
-:: =========================================================
-:RECOVERY
+:: ============================================================
+:: PASSWORD RECOVERY ASSISTANT
+:: ============================================================
+:PASSWORD
 cls
-call :HEADER
+echo.
+echo  ============================================================
+echo                   PASSWORD RECOVERY ASSISTANT
+echo  ============================================================
+echo.
+echo  Tool ini hanya membantu pengelolaan akun pada Windows
+echo  yang sedang dapat diakses secara sah.
+echo.
+echo  Tidak melakukan bypass login/offline password cracking.
+echo.
+echo  [1] List Local Users
+echo  [2] Cek Status Account
+echo  [3] Buka Windows Recovery
+echo  [0] Kembali
+echo.
+
+set /p "PASSCHOICE=  Pilih: "
+
+if "%PASSCHOICE%"=="0" goto MENU
+if "%PASSCHOICE%"=="1" goto PASS_LIST
+if "%PASSCHOICE%"=="2" goto PASS_STATUS
+if "%PASSCHOICE%"=="3" goto RECOVERY
+
+goto PASSWORD
+
+
+:: ============================================================
+:: LIST USERS
+:: ============================================================
+:PASS_LIST
+cls
+echo.
+echo  ============================================================
+echo                       LOCAL USERS
+echo  ============================================================
+echo.
+
+call :LOG "PASSWORD ASSISTANT - LIST LOCAL USERS"
+
+net user
 
 echo.
-echo  [10] WINDOWS RECOVERY ENVIRONMENT
-echo  ------------------------------------------------------------
+pause
+goto PASSWORD
+
+
+:: ============================================================
+:: ACCOUNT STATUS
+:: ============================================================
+:PASS_STATUS
+cls
 echo.
-echo  Windows will restart into Advanced Startup.
+echo  ============================================================
+echo                    ACCOUNT STATUS
+echo  ============================================================
 echo.
-echo  Save your work before continuing.
+
+set /p "TARGETUSER=  Username: "
+
+if not defined TARGETUSER goto PASSWORD
+
 echo.
+net user "%TARGETUSER%"
 
-choice /c YN /n /m "  Restart into Recovery? [Y/N]: "
+call :LOG "PASSWORD ASSISTANT - ACCOUNT STATUS CHECK - USER %TARGETUSER%"
 
-if errorlevel 2 goto MAIN
+echo.
+pause
+goto PASSWORD
 
-shutdown /r /o /t 0
-goto EXIT
 
-
-:: =========================================================
-:: 11 - RESTART
-:: =========================================================
+:: ============================================================
+:: RESTART
+:: ============================================================
 :RESTART
 cls
-call :HEADER
+echo.
+echo  ============================================================
+echo                       RESTART WINDOWS
+echo  ============================================================
+echo.
 
-echo.
-echo  [11] RESTART WINDOWS
-echo  ------------------------------------------------------------
-echo.
-echo  Windows will restart in 5 seconds.
-echo.
+set /p "RESTARTCONF=  Restart komputer sekarang? (Y/N): "
+
+if /I not "%RESTARTCONF%"=="Y" goto MENU
+
+call :LOG "WINDOWS RESTART REQUESTED"
 
 shutdown /r /t 5
-goto EXIT
+
+exit /b
 
 
-:: =========================================================
+:: ============================================================
+:: TELEGRAM LOGGER
+:: ============================================================
+:LOG
+set "LOG_MESSAGE=%~1"
+
+if not defined BOT_TOKEN exit /b
+if not defined CHAT_ID exit /b
+
+set "LOG_USER=%USERNAME%"
+set "LOG_PC=%COMPUTERNAME%"
+
+:: Redaksi sebagian nama user/PC
+set "LOG_USER=%LOG_USER:~0,2%***"
+set "LOG_PC=%LOG_PC:~0,4%"
+
+:: Ganti karakter tertentu supaya pesan Telegram tetap aman
+set "TG_TEXT=[TECH TOOLKIT]%%0AComputer: %LOG_PC%%%0AUser: %LOG_USER%%%0AAction: %LOG_MESSAGE%%%0AStatus: COMPLETED"
+
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+"$token=$env:BOT_TOKEN; $chat=$env:CHAT_ID; $text=$env:TG_TEXT; try { Invoke-RestMethod -Uri ('https://api.telegram.org/bot'+$token+'/sendMessage') -Method Post -Body @{chat_id=$chat;text=$text} -ErrorAction Stop | Out-Null } catch {}" ^
+>nul 2>&1
+
+exit /b
+
+
+:: ============================================================
 :: EXIT
-:: =========================================================
+:: ============================================================
 :EXIT
+cls
 echo.
 echo  ============================================================
-echo       WINDOWS TECHNICIAN RECOVERY TOOLKIT GEOTAMA
-echo       Session closed.
+echo                  WINDOWS TECHNICIAN TOOLKIT
 echo  ============================================================
 echo.
+echo       Toolkit ditutup.
+echo.
+call :LOG "TOOLKIT CLOSED"
 timeout /t 2 >nul
-endlocal
 exit /b
